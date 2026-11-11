@@ -114,7 +114,7 @@ gemini extensions install https://github.com/epoko77-ai/im-not-ai.git
 | `humanize-finalizer` | heavy | 원문 직접 대조로 의미 보존 15항 + 자연성 판정, 국소 보정 |
 | `korean-ai-tell-taxonomist` | 별도 명령 | 분류 체계(SSOT) 관리, 신규 패턴 심사 승격 |
 
-이 외에 `agents/`에는 릴리스 회차 전용 개발 도구 5개(`translationese-research-distiller` · `korean-translation-scholar` · `taxonomy-gap-analyzer` · `post-editese-metric-engineer` · `quick-rules-integrator` — v2.0 학술 흡수 작업용, 윤문 실행과 무관)가 함께 들어 있습니다.
+이 외에 `agents-dev/`에는 릴리스 회차 전용 개발 도구 5개(`translationese-research-distiller` · `korean-translation-scholar` · `taxonomy-gap-analyzer` · `post-editese-metric-engineer` · `quick-rules-integrator` — v2.0 학술 흡수 작업용, 윤문 실행과 무관)가 따로 들어 있습니다. 플러그인은 루트 `agents/`만 스캔하므로 이 5개는 플러그인 설치에 실리지 않습니다(`./install.sh --all-agents`로만 설치).
 
 Claude Code는 루트 `agents/` 정의를 호출합니다. Codex는 같은 런타임 역할을 `references/roles/{diagnostician,monolith,finalizer}.md` 계약으로 실행합니다. 협업 에이전트를 사용할 수 있으면 역할별 독립 컨텍스트로 실행하고, 사용할 수 없으면 주 에이전트가 같은 계약을 순차 실행합니다.
 
@@ -227,7 +227,7 @@ Claude Code 사용자는 방법 A~C를, GitHub Copilot CLI 사용자는 방법 D
 /plugin install humanize-korean@im-not-ai
 ```
 
-스킬 3개 + 서브에이전트 9개가 함께 설치됩니다. 자세한 옵션·스크립트 설치는 [설치](#설치-install) 섹션과 [`INSTALL.md`](INSTALL.md) 참고. (초기 패키징을 탐색한 [`gaebalai/im-not-ai`](https://github.com/gaebalai/im-not-ai) 포크도 있습니다.)
+스킬 3개 + 서브에이전트 4개가 함께 설치됩니다. 자세한 옵션·스크립트 설치는 [설치](#설치-install) 섹션과 [`INSTALL.md`](INSTALL.md) 참고. (초기 패키징을 탐색한 [`gaebalai/im-not-ai`](https://github.com/gaebalai/im-not-ai) 포크도 있습니다.)
 
 **방법 D — GitHub Copilot CLI (공식, 단일 호출 경로)**
 

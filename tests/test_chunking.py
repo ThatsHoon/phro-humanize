@@ -342,6 +342,53 @@ class ChunkCliRoundTripTests(unittest.TestCase):
                 report = json.load(f)
             self.assertTrue(any("유실 의심" in w for w in report["warnings"]))
 
+    def test_reassemble_drops_summary_blocks(self) -> None:
+        """청크 결과에 붙은 HUMANIZE-SUMMARY 블록은 떼고 조립한다(닫힘 누락 포함).
+
+        블록을 단 채 이어 붙이면 final.md 중간에 메타가 끼고, 게이트는 첫 블록부터
+        파일 끝까지를 잘라 본문 대부분이 사라진 것으로 집계한다(실측 77% ABORT).
+        """
+        text = LONG20K
+        with tempfile.TemporaryDirectory() as td:
+            with open(os.path.join(td, "01_input.txt"), "w", encoding="utf-8") as f:
+                f.write(text)
+            PREP.main(["--chunk", "--run-dir", td])
+            with open(
+                os.path.join(td, "chunk_manifest.json"), encoding="utf-8"
+            ) as f:
+                manifest = json.load(f)
+            body = [e for e in manifest["chunks"] if not e["passthrough"]]
+            self.assertGreaterEqual(len(body), 2)
+            for i, entry in enumerate(body):
+                chunk_text = text[entry["start"] : entry["end"]]
+                close = "-->\n" if i else ""  # 첫 청크는 `-->` 를 빠뜨린 경우
+                with open(
+                    os.path.join(td, entry["rewritten_file"]), "w", encoding="utf-8"
+                ) as f:
+                    f.write(
+                        chunk_text.rstrip()
+                        + f"\n\n<!-- HUMANIZE-SUMMARY v1.6.1\n청크 {i} 변경률 3%\n"
+                        + close
+                    )
+            rc = REASM.main(["--run-dir", td, "--strict"])
+            self.assertEqual(rc, 0, "블록 제거는 경고가 아니다 — strict 도 통과")
+            with open(os.path.join(td, "03_reassembled.md"), encoding="utf-8") as f:
+                out = f.read()
+            self.assertNotIn("HUMANIZE-SUMMARY", out)
+            self.assertEqual(out, text, "블록을 뗀 뒤 왕복 항등이 깨짐")
+            with open(
+                os.path.join(td, "03_reassembly_report.json"), encoding="utf-8"
+            ) as f:
+                report = json.load(f)
+            self.assertEqual(len(report["notes"]), len(body))
+            dropped = [c.get("summary_blocks_dropped") for c in report["chunks"]
+                       if not c["passthrough"]]
+            self.assertEqual(dropped, [1] * len(body))
+            with open(
+                os.path.join(td, body[1]["rewritten_file"]), encoding="utf-8"
+            ) as f:
+                self.assertIn("HUMANIZE-SUMMARY", f.read(), "청크 파일 원본은 그대로")
+
     def test_reassemble_refuses_stale_manifest(self) -> None:
         """청킹 이후 입력이 바뀌면 재조립을 거부한다 (sha256 대조)."""
         with tempfile.TemporaryDirectory() as td:

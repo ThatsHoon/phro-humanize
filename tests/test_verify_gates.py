@@ -233,6 +233,24 @@ class MainExitCodeTests(unittest.TestCase):
         after = _PLAIN + "\n\n<!-- HUMANIZE-SUMMARY\n변경률 3% | 수치 2건\n-->\n"
         self.assertEqual(self._run(_PLAIN, after), 0)
 
+    def test_summary_block_mid_body_is_undecidable(self) -> None:
+        """청크마다 summary 를 단 채 재조립한 꼴. 첫 블록부터 끝까지 잘라 재면
+        블록 뒤 본문이 빠져 거짓 ABORT 가 난다 — 재지 말고 판정 불가(3)."""
+        block = "\n\n<!-- HUMANIZE-SUMMARY\n변경률 3%\n-->\n\n"
+        cut = _PLAIN.index("버스")
+        after = _PLAIN[:cut] + block + _PLAIN[cut:]
+        self.assertEqual(self._run(_PLAIN, after), 3)
+        self.assertGreater(verify_gates.summary_tail_chars(after), 0)
+
+    def test_trailing_summary_blocks_are_judged(self) -> None:
+        """끝에 몰린 블록(여러 개·닫힘 누락 포함)은 기존대로 떼고 잰다."""
+        two = _PLAIN + "\n<!-- HUMANIZE-SUMMARY\na\n-->\n<!-- HUMANIZE-SUMMARY\nb\n-->\n"
+        unclosed = _PLAIN + "\n\n<!-- HUMANIZE-SUMMARY\n변경률 3%\n"
+        for after in (two, unclosed):
+            with self.subTest(after=after[-20:]):
+                self.assertEqual(verify_gates.summary_tail_chars(after), 0)
+                self.assertEqual(self._run(_PLAIN, after), 0)
+
     def test_json_flag_emits_parseable_report(self) -> None:
         import contextlib
         import io

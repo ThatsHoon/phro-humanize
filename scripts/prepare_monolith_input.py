@@ -12,6 +12,10 @@ Inputs:
   --text STR        ad-hoc text; if --run-dir is omitted, a new run dir
                     `_workspace/<YYYY-MM-DD>-NNN/` is created and
                     01_input.txt written.
+  --input-file PATH ad-hoc input from a file (`-` = stdin). Same semantics
+                    as --text, but the text never passes through argv or
+                    the orchestrator's context — the caller does not have
+                    to Read the file and Write it back.
   --genre STR       essay|column|report|blog|abstract|... (default: essay)
   --diagnosis PATH  optional diagnosis text prepended before the metrics
                     block (정밀 3콜 구조의 진단 1콜 산출물 자리)
@@ -98,6 +102,39 @@ def _next_run_dir(workspace: Path, session_tag: str | None = None) -> Path:
     raise SystemExit(
         f"run dir 자리를 못 찾았다: {workspace}/{today}-NNN{tag} 가 999개까지 찼다"
     )
+
+
+def _read_input_file(path_arg: str) -> str:
+    """`--input-file` 본문을 읽는다. `-` 는 stdin.
+
+    왜 있나: 파일 입력을 받으면 오케스트레이터가 Read 로 본문을 컨텍스트에 싣고
+    Write 로 01_input.txt 에 다시 써야 했다 — 같은 본문이 입력 토큰으로 한 번,
+    출력 토큰으로 또 한 번 나간다. 여기서 직접 읽으면 둘 다 사라진다.
+
+    인코딩은 UTF-8(BOM 허용) 우선, 실패하면 CP949(윈도 메모장 구버전 저장본)로
+    한 번 더 본다. 줄끝은 LF 로 통일한다 — 윤문본은 LF 로 나오므로 CRLF 원문을
+    그대로 두면 게이트가 줄마다 변경으로 센다.
+    """
+    if path_arg == "-":
+        raw = sys.stdin.buffer.read()
+        where = "stdin"
+    else:
+        p = Path(path_arg)
+        if not p.is_absolute():
+            p = Path.cwd() / p  # --run-dir 과 같은 기준(cwd)
+        if not p.is_file():
+            raise SystemExit(f"--input-file not found: {p}")
+        raw = p.read_bytes()
+        where = str(p)
+    for enc in ("utf-8-sig", "cp949"):
+        try:
+            text = raw.decode(enc)
+            break
+        except UnicodeDecodeError:
+            continue
+    else:
+        raise SystemExit(f"--input-file 인코딩을 읽지 못함(UTF-8/CP949 아님): {where}")
+    return text.replace("\r\n", "\n").replace("\r", "\n")
 
 
 def _resolve_run_dir(
@@ -915,6 +952,13 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--run-dir", help="Existing run directory (relative ok)")
     p.add_argument("--text", help="Inline text input (creates new run dir)")
     p.add_argument(
+        "--input-file",
+        default=None,
+        help="입력 본문 파일(`-` 는 stdin). --text 와 같은 의미 — 새 run 디렉터리를 "
+        "만들거나 --run-dir 의 01_input.txt 를 덮어쓴다. 오케스트레이터가 본문을 "
+        "Read→Write 로 옮기지 않아도 된다.",
+    )
+    p.add_argument(
         "--session-tag",
         default=None,
         help="run 디렉터리 이름 뒤에 붙는 세션 구분자(예: a3f9). 한 머신에서 여러 "
@@ -947,6 +991,11 @@ def main(argv: list[str] | None = None) -> int:
         "(AI 워터마크와 무관 — scripts/sanitize_text.py 참조)",
     )
     args = p.parse_args(argv)
+
+    if args.input_file is not None:
+        if args.text is not None:
+            raise SystemExit("--text 와 --input-file 은 함께 쓸 수 없다")
+        args.text = _read_input_file(args.input_file)
 
     diagnosis: str | None = None
     if args.diagnosis:

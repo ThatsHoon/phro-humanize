@@ -90,6 +90,26 @@ def strip_summary_block(text: str) -> str:
     return _SUMMARY_BLOCK_RE.sub("", text).strip()
 
 
+_HTML_COMMENT_RE = re.compile(r"<!--.*?(?:-->|\Z)", re.DOTALL)
+
+
+def summary_tail_chars(text: str) -> int:
+    """첫 HUMANIZE-SUMMARY 블록 **뒤에** 남은 본문 글자 수(HTML 주석 제외).
+
+    strip_summary_block 은 첫 블록부터 파일 끝까지를 메타로 보고 자른다. 블록이
+    본문 중간에 끼면(청크마다 summary 를 단 채 재조립) 그 뒤 본문이 빠진 채
+    비교돼 문자율이 거짓으로 치솟는다 — 그럴 땐 재지 말고 판정 불가로 알린다.
+    블록이 끝에 있거나, 닫히지 않아 렌더링에서도 끝까지 주석이면 0.
+    """
+    m = _SUMMARY_BLOCK_RE.search(text)
+    if m is None:
+        return 0
+    end = text.find("-->", m.start())
+    if end < 0:
+        return 0
+    return len(_HTML_COMMENT_RE.sub("", text[end + 3:]).strip())
+
+
 def _read(path: str) -> str:
     with open(path, "r", encoding="utf-8") as f:
         return f.read()
@@ -278,11 +298,20 @@ def main(argv: list[str] | None = None) -> int:
             return 3
 
     try:
-        before = strip_summary_block(_read(args.before))
-        after = strip_summary_block(_read(args.after))
+        raw = {path: _read(path) for path in (args.before, args.after)}
     except OSError as e:
         print(f"error: 파일 읽기 실패: {e}", file=sys.stderr)
         return 3
+    for path, text in raw.items():
+        tail = summary_tail_chars(text)
+        if tail:
+            print(f"error: {path}: HUMANIZE-SUMMARY 블록 뒤에 본문 {tail}자가 있다 — "
+                  "블록은 파일 끝 한 곳에만 둔다. 이대로 재면 블록 뒤 본문이 빠진 채 "
+                  "비교된다. 청크 재조립본이면 reassemble_chunks.py 로 다시 조립할 것. "
+                  "판정 불가", file=sys.stderr)
+            return 3
+    before = strip_summary_block(raw[args.before])
+    after = strip_summary_block(raw[args.after])
 
     report: dict = {"genre": args.genre}
     warn = False

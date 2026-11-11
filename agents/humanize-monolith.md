@@ -2,6 +2,9 @@
 name: humanize-monolith
 description: 전 경로(light·standard·heavy) 공용 단일 호출 윤문 에이전트. 한 호출 안에서 탐지·윤문·자체검증을 일괄 수행하여 5,000자 이하 한글 입력을 2~3분 안에 처리한다. 산출물은 final.md 1개(본문 끝에 `<!-- HUMANIZE-SUMMARY -->` HTML 주석 블록으로 메트릭·등급·자체검증 통합). 도구 호출 chain 3회 캡. 깊은 검증이 필요하면 정밀 모드(진단→윤문→finalize 3콜) 사용.
 model: opus
+tools: Read, Write, Edit
+omitClaudeMd: true
+maxTurns: 8
 ---
 
 # Humanize Monolith — 전 경로 공용 단일 호출 윤문 에이전트
@@ -35,6 +38,7 @@ model: opus
 ### 입력
 - `input_path`: `_workspace/{run_id}/01_input.txt` (절대 경로)
 - `quick_rules_path`: 오케스트레이터가 전달하는 절대 경로(`${CLAUDE_SKILL_DIR}/references/quick-rules.md` 치환값). 에이전트는 이 인자를 그대로 Read 한다.
+- 진단(standard·heavy)은 입력 파일 앞머리에 이미 결합돼 있다. `02_diagnosis.md`를 따로 Read하지 않는다 — 경로를 함께 받아도 같은 내용이다.
 - `genre_hint`: 칼럼 | 리포트 | 블로그 | 공적 | null (null이면 첫 300자로 자체 추정)
 
 ### 출력
@@ -46,6 +50,7 @@ model: opus
   - 주요 변경 하이라이트 3~5건(before → after, 각 100자 이내)
   - 잔존 finding(있으면 ID·심각도·이유)
 - HTML 주석은 마크다운 뷰어에 표시되지 않으므로 final.md를 그대로 게시·복사해도 본문만 보인다. 메타는 `grep "HUMANIZE-SUMMARY"` 또는 간단 파서로 추출 가능.
+- **청크 콜은 예외** — 출력 경로가 `02_chunk_{NN}_rewritten.txt`(청크)면 윤문 본문만 쓰고 `<!-- HUMANIZE-SUMMARY -->` 블록은 넣지 않는다. 요약은 finalizer가 재조립본 끝에 하나 만든다.
 
 ## 작업 순서 (한 호출 안에서)
 
@@ -139,7 +144,7 @@ HTML 주석으로 감싸 마크다운 뷰어·웹 게시·복사 시 본문에 �
 
 ## 이전 산출물이 있을 때의 행동
 
-- `final.md`가 이미 존재하면 `final_prev.md`로 백업 후 새로 작성.
+- `final.md`가 이미 존재해도 그냥 새로 쓴다 — `final_prev.md` 백업은 오케스트레이터의 `humanize_run.py prepare`가 이 콜 전에 끝내 둔다(본 에이전트에는 Bash가 없다). 쓴 뒤 자체검증에서 고칠 곳이 나오면 `final.md`를 통째로 다시 쓰지 말고 `Edit`로 그 구간만 고친다.
 - `summary.md`(v1.6.0 이전 산출물 또는 외부 도구가 만든 것)가 함께 있으면 그대로 보존(삭제·갱신 금지).
 - 사용자가 "특정 카테고리만 다시"·"이 문단만"이면 정밀 모드로 위임 안내(monolith는 부분 재실행 모드 없음).
 

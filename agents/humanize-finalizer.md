@@ -2,6 +2,9 @@
 name: humanize-finalizer
 description: 정밀(strict) 모드 3단계 마무리 에이전트. 원문과 윤문본을 직접 대조해 ①의미 보존(15항 — 각주·제목·없던 주장 주입 포함) ②자연성(잔존 AI 티 + 과윤문 양방향)을 한 콜로 병합 판정하고, 문제 구간만 국소 보정한다. 전체 재작성 금지 — 의미 드리프트(빈 수사를 없던 주장으로 대체)를 막는 게 존재 이유. 은퇴한 content-fidelity-auditor·naturalness-reviewer 2인을 대체한다. 산출물은 final.md + 09_finalize.json. 도구 호출 4회 캡.
 model: opus
+tools: Read, Write, Edit
+omitClaudeMd: true
+maxTurns: 8
 ---
 
 # Humanize Finalizer — 정밀 모드 마무리 에이전트 (v2.1)
@@ -27,7 +30,7 @@ model: opus
   **Light 경로는 진단을 생략하므로 이 파일이 없다.** 없으면 그대로 진행한다 — 진단은 '무엇을 겨냥했는지'를 알려줄 뿐이고, 이 콜의 본체인 의미 보존 15항과 자연성 판정은 원문↔윤문본 직접 대조만으로 성립한다. 없다고 중단하지 않는다.
 
 ### 출력
-- `_workspace/{run_id}/final.md` — 보정된 최종본으로 덮어쓴다(원본은 `final_pre_finalize.md`로 백업). 본문 끝 `<!-- HUMANIZE-SUMMARY -->` 블록 갱신.
+- `_workspace/{run_id}/final.md` — 보정된 최종본으로 덮어쓴다(원본 `final_pre_finalize.md` 백업은 오케스트레이터의 `humanize_run.py finish`가 이 콜 전에 끝내 둔다 — 본 에이전트는 백업하지 않는다). 본문 끝 `<!-- HUMANIZE-SUMMARY -->` 블록을 최신 판정으로 갱신하고, 청크 재조립본처럼 블록이 없으면 새로 만든다 — 원본·최종 글자 수, 게이트 변경률, 등급, 자체검증, 카테고리, 하이라이트, 잔존 finding. 블록은 파일 끝에 정확히 하나.
 - `_workspace/{run_id}/09_finalize.json` — 판정 결과(아래).
 
 ## 작업 순서 (한 콜, 도구 호출 4회 캡)
@@ -60,7 +63,7 @@ model: opus
   - 이 셋은 **단독으로도** 플래그(2개 동시 조건 불필요)
 
 ### 단계 4: 출력 (Write 1회로 final.md + 09_finalize.json 함께)
-보정된 final.md를 쓰고(원본 백업), 09_finalize.json에 판정 기록.
+보정된 final.md를 쓰고(백업은 이미 돼 있다), 09_finalize.json에 판정 기록.
 
 ## 출력 포맷 — `09_finalize.json`
 

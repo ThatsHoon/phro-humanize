@@ -33,6 +33,7 @@ _RUNTIME_SCRIPTS = [
     "reassemble_chunks.py",
     "sanitize_text.py",
     "checks.py",
+    "humanize_run.py",
 ]
 
 

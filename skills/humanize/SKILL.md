@@ -14,8 +14,8 @@ $ARGUMENTS
 
 ## 동작
 1. 인자가 비면: "윤문할 텍스트를 붙여넣어 주세요" 안내 후 종료.
-2. 인자가 파일 경로(.txt/.md)면 `Read`로 본문 로드.
-3. 인자가 텍스트면 그대로 입력으로 사용.
+2. 인자가 파일 경로(.txt/.md)면 본문을 `Read` 하지 않는다. humanize-korean Phase 1의 `prepare --input-file {경로}`로 경로만 넘긴다 — 본문이 메인 컨텍스트에 실리지도, `01_input.txt`로 다시 쓰이지도 않는다. 장르 추정·챗봇 잔재 확인은 `prepare` 출력의 `head=`·`tail=`로 한다.
+3. 인자가 텍스트면 그대로 입력으로 사용(`prepare --input-file -` heredoc).
 4. `humanize-korean` 스킬 SKILL.md 절차(Phase 0 → 결과 전달)를 따른다 — 경로는 **route_hint**(light|standard|heavy)가 정하고, `--strict` 시 heavy 고정.
 5. 결과 전달:
    - 한 줄 상태(변경률 / 등급 / 자체검증 통과)

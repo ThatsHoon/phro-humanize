@@ -19,7 +19,9 @@ EXTRAS=0
 TS="$(date +%Y%m%d-%H%M%S)"
 
 # 스킬 런타임이 호출하는 3종 + 별도 명령으로만 트리거되는 유지보수 1종.
-# agents/ 의 나머지(릴리스 회차용 개발 도구)는 --all-agents 일 때만 설치한다 —
+# 릴리스 회차용 개발 도구는 agents-dev/ 에 따로 두고 --all-agents 일 때만 설치한다 —
+# (플러그인 로더는 루트 agents/ 만 스캔하므로, 개발용을 거기 두면 플러그인 설치
+#  사용자의 세션마다 description 이 Agent 도구 목록에 실린다.)
 # 서브에이전트는 description 매칭으로 자동 라우팅되므로, 윤문과 무관한 정의가
 # 전역 풀에 상주하면 다른 작업에서 잘못 호출될 수 있다.
 INSTALLED_AGENTS="humanize-monolith humanize-diagnostician humanize-finalizer korean-ai-tell-taxonomist"
@@ -40,7 +42,7 @@ Options:
   --codex-only    Codex만 설치 시도(codex 명령 또는 ~/.codex 감지 시)
   --gemini-only   Gemini만 설치
   --no-gemini     Gemini 건너뜀 (claude/codex만)
-  --all-agents    agents/ 전체를 전역 설치(개발용 1회성 정의 포함).
+  --all-agents    agents/ + agents-dev/ 전체를 전역 설치(개발용 1회성 정의 포함).
                   기본은 스킬이 실제로 쓰는 4종만 — 런타임 3(monolith·
                   diagnostician·finalizer) + 유지보수 1(taxonomist).
   --extras        opt-in 부속 스킬(extras/skills/) 설치.
@@ -128,7 +130,7 @@ prune_stale_agents() {
     [ -L "$f" ] || continue
     target="$(readlink "$f")"
     case "$target" in
-      "$REPO/agents/"*) ;;   # 이 저장소가 심은 것 → 대상
+      "$REPO/agents/"*|"$REPO/agents-dev/"*) ;;   # 이 저장소가 심은 것 → 대상
       *) continue ;;         # 남의 것 → 손대지 않음
     esac
     base="$(basename "$f" .md)"
@@ -183,7 +185,7 @@ install_one() {
 RUNTIME_SCRIPTS=(
   prepare_monolith_input.py reassemble_chunks.py verify_change_rate.py
   verify_gates.py restore_modality.py strip_injected_commas.py sanitize_text.py
-  checks.py console.py
+  checks.py console.py humanize_run.py
 )
 
 copy_runtime_scripts() {
@@ -231,7 +233,7 @@ if [ "$DO_CLAUDE" != no ] && { [ "$DO_CLAUDE" = yes ] || has_claude_target; }; t
   fi
   agents=()
   if [ "$ALL_AGENTS" = 1 ]; then
-    for a in "$REPO/agents"/*.md; do
+    for a in "$REPO/agents"/*.md "$REPO/agents-dev"/*.md; do
       if [ -e "$a" ]; then agents[${#agents[@]}]="$a"; fi
     done
   else

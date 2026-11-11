@@ -12,6 +12,8 @@
   - 청크별 문자 수 대사: 윤문 결과가 원문 절반 이하(유실 의심)거나 2배
     초과(증식 의심)면 경고. --strict 면 경고를 오류(exit 1)로 처리.
   - 윤문 결과가 비어 있으면 즉시 오류.
+  - 청크 결과에 붙은 `<!-- HUMANIZE-SUMMARY -->` 블록은 떼고 조립한다(청크
+    파일 원본은 그대로 둔다). 요약 블록은 finalizer 가 재조립본 끝에 하나 만든다.
 
 공백 복원: 청크 경계의 문단 구분 개행은 분할 시 앞 청크 꼬리에 붙어 있다.
 LLM 출력은 앞뒤 공백이 불안정하므로, 윤문 결과의 앞뒤 공백을 벗겨내고
@@ -26,8 +28,15 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import sys
 from pathlib import Path
+
+# 청크 결과에 붙은 메타 블록. 닫는 `-->` 가 없으면 파일 끝까지.
+# 블록을 단 채 이어 붙이면 final.md 중간에 메타가 끼고, 게이트는 첫 블록부터
+# 파일 끝까지를 메타로 보고 잘라 본문 대부분이 사라진 것으로 집계한다
+# (22K자 리포트 실측: 블록 7개 → 게이트가 본문 2,886자만 보고 문자율 77% ABORT).
+_SUMMARY_BLOCK_RE = re.compile(r"<!--\s*HUMANIZE-SUMMARY\b.*?(?:-->|\Z)", re.DOTALL)
 
 
 def _leading_ws(s: str) -> str:
@@ -91,6 +100,7 @@ def main(argv: list[str] | None = None) -> int:
     pieces: list[str] = []
     report_chunks: list[dict] = []
     warnings: list[str] = []
+    notes: list[str] = []
     for c in chunks:
         orig = text[c["start"] : c["end"]]
         idx = c["index"]
@@ -102,6 +112,12 @@ def main(argv: list[str] | None = None) -> int:
             continue
 
         rewritten = (run_dir / c["rewritten_file"]).read_text(encoding="utf-8")
+        rewritten, n_summary = _SUMMARY_BLOCK_RE.subn("", rewritten)
+        if n_summary:
+            notes.append(
+                f"청크 {idx}: HUMANIZE-SUMMARY 블록 {n_summary}개를 떼고 조립함 "
+                f"({c['rewritten_file']} 원본은 그대로)"
+            )
         core_orig = orig.strip()
         core_new = rewritten.strip()
         if core_orig and not core_new:
@@ -125,15 +141,16 @@ def main(argv: list[str] | None = None) -> int:
                     f"({ratio:.0%}) — 증식 의심"
                 )
         pieces.append(piece)
-        report_chunks.append(
-            {
-                "index": idx,
-                "passthrough": False,
-                "orig_chars": len(core_orig),
-                "rewritten_chars": len(core_new),
-                "ratio": round(ratio, 3),
-            }
-        )
+        entry = {
+            "index": idx,
+            "passthrough": False,
+            "orig_chars": len(core_orig),
+            "rewritten_chars": len(core_new),
+            "ratio": round(ratio, 3),
+        }
+        if n_summary:
+            entry["summary_blocks_dropped"] = n_summary
+        report_chunks.append(entry)
 
     out = "".join(pieces)
     output_path = run_dir / args.output
@@ -144,6 +161,7 @@ def main(argv: list[str] | None = None) -> int:
         "output_chars": len(out),
         "total_ratio": round(len(out) / len(text), 3) if text else None,
         "warnings": warnings,
+        "notes": notes,
         "chunks": report_chunks,
     }
     (run_dir / args.report).write_text(
@@ -159,6 +177,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     for w in warnings:
         print(f"WARNING: {w}")
+    for n in notes:
+        print(f"NOTE: {n}")
     if args.strict and warnings:
         return 1
     return 0

@@ -169,7 +169,7 @@ set -e
 # 판정값(OK/WARN/ABORT)이 아니라 축이 실제로 돌았는지를 본다 — 예문은 변경률이 커 ABORT 가 정상.
 grep -q '\[P3 golden\]' "$TMP/gates-copy.log" && grep -q '^gate:' "$TMP/gates-copy.log" \
   || { cat "$TMP/gates-copy.log" >&2; fail "복사 설치에서 게이트 실행 불가 (rc=$GATE_RC)"; }
-for f in restore_modality strip_injected_commas sanitize_text reassemble_chunks; do
+for f in restore_modality strip_injected_commas sanitize_text reassemble_chunks humanize_run; do
   python3 "$COPY_ROOT/scripts/$f.py" --help >/dev/null 2>&1 || fail "복사 설치에서 $f.py 실행 불가"
 done
 ok "복사 설치 — SKILL_ROOT 유도 + shim·게이트·보정 스크립트 동작 (#144)"

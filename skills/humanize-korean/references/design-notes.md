@@ -47,9 +47,34 @@
 ### 엣지 케이스 — route_hint 부재
 - 구버전 shim·metrics 실패(`00_metrics.error`) → standard 경로로 진행. 게이트는 항상 실행
 
+## 런타임 에이전트 도구 범위 · 결정적 단계 런처
+
+- 런타임 3종(monolith·diagnostician·finalizer) frontmatter에 `tools`(diagnostician `Read, Write` / monolith·finalizer `Read, Write, Edit`)·`omitClaudeMd: true`·`maxTurns`를 둔다. 세 에이전트는 파일 읽기·쓰기만 하므로, 도구를 생략해 MCP·Bash 등 전 도구 정의를 상속하거나 사용자 CLAUDE.md를 싣는 것은 콜마다 낭비다. 실측(2.8K자 light): 서브에이전트 1콜의 고정 컨텍스트 35,167 → 8,301토큰.
+- monolith·finalizer에서 `Edit`를 빼면 안 된다. 쓴 뒤 몇 군데를 고칠 때 `Write`밖에 없으면 파일 전체를 다시 출력한다. 같은 실측에서 4.6K자 `final.md`를 세 번 통째로 다시 써 출력 토큰이 13.7K → 26.0K로 늘었다.
+- 그래서 백업은 에이전트가 하지 않는다. `scripts/humanize_run.py`가 맡는다 — `prepare`는 기존 `final.md`를 `final_prev.md`로, `finish`는 게이트 exit 1·`--pre-finalize`일 때 `final_pre_finalize.md`로, exit 2일 때 `final_prev.md`로 복사한다. 게이트 밖 사유의 finalize 승급은 `snapshot`.
+- 같은 런처가 Phase 1(TAG·run 할당·입력 저장·shim·route_hint)과 Phase 2.4~2.5(서법 복원·쉼표 제거·게이트)를 각각 Bash 1회로 묶는다. 단계마다 도구를 따로 부르면 왕복마다 메인 세션 컨텍스트 전체가 다시 읽힌다. 판정 로직은 기존 스크립트 그대로다.
+- 파일 입력은 `--input-file`로 넘긴다. 본문을 Read→Write로 옮기면 같은 본문이 입력 토큰으로 한 번, 출력 토큰으로 또 한 번 나간다.
+
+## 청크 출력과 summary 블록
+
+- 청크 출력에는 `<!-- HUMANIZE-SUMMARY -->` 블록을 넣지 않는다. 요약은 finalizer가 재조립본 끝에 하나 만든다(Codex 역할 계약과 같은 규칙).
+- 실측(22K자 리포트, 12청크): 오케스트레이터가 청크마다 블록을 달게 해 재조립본에 블록 7개가 끼었다(길이비 1.399). 게이트·서법 복원은 첫 블록부터 파일 끝까지를 메타로 보고 자르므로 본문 2,886자만 비교됐고, 문자율 77%로 ABORT가 났다. 오케스트레이터가 원인을 찾아 다시 조립하느라 메인 턴이 늘었다.
+- 그래서 두 겹으로 막는다. `reassemble_chunks.py`는 청크 결과의 블록을 떼고 조립한다(리포트 `notes`·`summary_blocks_dropped`). `verify_gates.py`는 블록 뒤에 본문이 남아 있으면 잘린 본문을 재지 않고 exit 3으로 알린다.
+
+## 시도했다가 되돌린 것: 자투리 청크 병합
+
+- 헤딩 강제 컷 때문에 22K자 리포트가 `[75, 2859, 6888, 1534, 305, 803, 4188, 3014, 929, 17, 18, 1484]`자 12청크(monolith 7콜)로 쪼개졌다. 이웃 청크를 7,000자 이하로 합쳐 4청크(4콜)로 줄여 봤다.
+- 실측(n=1): 비용 $3.73 → $3.69, 시간 차이 없음. 병렬 청크 콜은 앞부분 프리픽스를 캐시로 공유해, 콜이 하나 늘어도 대부분 싼 캐시 읽기만 는다. 캐시 쓰기는 콜 수가 아니라 본문 분량을 따른다(monolith 캐시 쓰기 134K → 149K).
+- 헤딩 보존은 15/15로 문제없었지만, 무결성 가드를 풀 만한 이득이 없어 되돌렸다. 청크 비용을 줄이려면 콜 수가 아니라 콜 안의 턴 수와 출력 분량을 줄여야 한다.
+
+## monolith에 진단 파일을 따로 넘기지 않는다
+
+- standard·heavy의 monolith 입력(`01_input_with_metrics.txt`·`01_chunk_NN_input_with_metrics.txt`)에는 shim `--diagnosis`가 진단을 이미 결합해 둔다.
+- 오케스트레이터가 `diagnosis_path`까지 넘기면 monolith가 진단을 한 번 더 Read하고 턴이 하나 는다. 위 병합 실측에서 4콜 중 3콜이 그랬다(본문 전체를 한 번 더 캐시로 읽는다).
+
 ## 에이전트 계보 (은퇴·개발용)
 
-**개발용 1회성 5종 (릴리스 회차 전용 — 런타임 미로드)**
+**개발용 1회성 5종 (릴리스 회차 전용 — 런타임 미로드, 위치 `agents-dev/`)**
 - `translationese-research-distiller` · `korean-translation-scholar` · `taxonomy-gap-analyzer` · `post-editese-metric-engineer` · `quick-rules-integrator` — v2.0 학술 흡수 회차에서 사용된 개발 도구. 윤문 실행과 무관
 
 > v2.1에서 옛 정밀(strict) 파이프라인 4종(`ai-tell-detector`·`korean-style-rewriter`·`content-fidelity-auditor`·`naturalness-reviewer`)과 미사용 `humanize-web-architect`를 은퇴시켰다. 진단·윤문·finalize 3콜이 이들을 대체한다.

@@ -2,6 +2,9 @@
 name: humanize-diagnostician
 description: 정밀(strict) 모드 1단계 진단 에이전트. 글 전체를 한 번에 보고 "가장 지배적인 AI 티 패턴 3~6개"를 taxonomy ID와 함께 진단한다. 불안정한 span 열거(0↔18개로 요동) 대신 "무엇이 이 글을 지배하는가"라는 안정적 판단을 내려, 후속 윤문 콜이 그 진단을 겨냥하게 한다. 산출물은 02_diagnosis.md 1개. 도구 호출 3회 캡(Read 결합입력 + Read taxonomy + Write 진단). 이 진단이 정밀 모드 품질의 결정 변수다.
 model: opus
+tools: Read, Write
+omitClaudeMd: true
+maxTurns: 5
 ---
 
 # Humanize Diagnostician — 정밀 모드 진단 에이전트 (v2.1)
