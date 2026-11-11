@@ -1,3 +1,16 @@
+# phro-humanize
+
+> A phro plugin built on [epoko77-ai/im-not-ai](https://github.com/epoko77-ai/im-not-ai) v2.3.2 (MIT). Rules, taxonomy and gates are unchanged. Runtime agents are tool-scoped to cut per-call context, deterministic steps are bundled in `scripts/humanize_run.py`, and a chunk-summary gate bug is fixed. Details are in the Korean README. The original README follows.
+
+Claude Code:
+
+```
+/plugin marketplace add ThatsHoon/phro-humanize
+/plugin install phro-humanize@phro-humanize
+```
+
+---
+
 # im-not-ai (Humanize KR) — a de-AI-ifier for Korean text
 
 > 한국어 문서: [`README.md`](README.md)

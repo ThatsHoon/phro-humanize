@@ -1,5 +1,7 @@
 # Humanize KR — AI 한글 티 제거 하네스 (v2.3.2)
 
+> 이 저장소는 **phro-humanize** — epoko77-ai/im-not-ai v2.3.2(MIT) 기반 phro 플러그인이다. Claude 플러그인 이름은 `phro-humanize`(스킬 호출 `/phro-humanize:humanize`), 스킬·에이전트 이름은 원본과 같다.
+
 ## 프로젝트 개요
 
 AI(ChatGPT·Claude·Gemini 등)가 쓴 한글 텍스트를 "사람이 쓴 글처럼" 윤문해주는 3경로 하네스. 번역투·영어 인용 과다·기계적 병렬·관용구·피동태 남용·접속사 남발·리듬 균일성·이모지/불릿 과다 등 10대 카테고리 85개 AI 티 패턴(A-17 hold 1건 포함)을 탐지·분류해 **내용은 한 글자도 건드리지 않고** 문체·리듬·표현만 재작성한다.
@@ -47,7 +49,7 @@ im-not-ai/
 ├── CONTRIBUTORS.md
 ├── .claude-plugin/                # Claude 플러그인 + 마켓플레이스 매니페스트
 │   ├── plugin.json                # skills: ./skills/ · 에이전트는 루트 agents/ 자동탐색
-│   └── marketplace.json           # /plugin marketplace add epoko77-ai/im-not-ai
+│   └── marketplace.json           # /plugin marketplace add ThatsHoon/phro-humanize
 ├── gemini-extension.json          # Gemini CLI Extension 매니페스트
 ├── GEMINI.md                      # Gemini 에이전트 컨텍스트 (monolith 룰 인라인)
 ├── commands/                      # Gemini CLI 커스텀 명령 (/humanize-korean, /humanize, /humanize-scan, /humanize-redo)

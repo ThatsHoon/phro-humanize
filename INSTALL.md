@@ -1,5 +1,7 @@
 # 설치 가이드 (Install)
 
+> **phro-humanize** — Claude Code 설치는 `/plugin marketplace add ThatsHoon/phro-humanize` → `/plugin install phro-humanize@phro-humanize`입니다. 아래는 원본(im-not-ai) 설치 문서이며, 저장소 URL과 마켓플레이스·플러그인 이름은 원본 기준입니다.
+
 Humanize KR은 **Claude Code**, **GitHub Copilot CLI**, **OpenAI Codex CLI**, **Gemini CLI(Antigravity)** 에서 전역으로 쓸 수 있습니다.
 
 | 도구 | 경로 | 설치 방법 |

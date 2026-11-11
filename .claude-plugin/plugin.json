@@ -1,12 +1,12 @@
 {
-  "name": "humanize-korean",
+  "name": "phro-humanize",
   "version": "2.3.2",
-  "description": "AI가 쓴 한글 텍스트를 사람이 쓴 글처럼 윤문 — route_hint 3경로(light 1콜 · standard 2콜 · heavy 3+콜). 10대 카테고리 85 AI 티 패턴 탐지·재작성.",
+  "description": "AI가 쓴 한글 텍스트를 사람이 쓴 글처럼 윤문 — route_hint 3경로(light 1콜 · standard 2콜 · heavy 3+콜), 10대 카테고리 85 AI 티 패턴 탐지·재작성. epoko77-ai/im-not-ai(MIT) 기반, 서브에이전트 토큰 효율화 적용.",
   "author": {
-    "name": "epoko77-ai"
+    "name": "thatshoon"
   },
-  "homepage": "https://github.com/epoko77-ai/im-not-ai",
-  "repository": "https://github.com/epoko77-ai/im-not-ai",
+  "homepage": "https://github.com/ThatsHoon/phro-humanize",
+  "repository": "https://github.com/ThatsHoon/phro-humanize",
   "license": "MIT",
   "keywords": [
     "korean",
@@ -14,6 +14,7 @@
     "ai-detector",
     "translationese",
     "윤문",
-    "번역투"
+    "번역투",
+    "phro"
   ]
 }

@@ -1,3 +1,30 @@
+# phro-humanize
+
+> [epoko77-ai/im-not-ai](https://github.com/epoko77-ai/im-not-ai) v2.3.2(MIT)를 바탕으로 만든 phro 플러그인입니다. 윤문 규칙·탐지 체계·게이트는 원본 그대로이고, 아래 변경을 더했습니다. 원본 문서는 이 절 아래에 그대로 둡니다.
+
+## Claude Code 설치
+
+```
+/plugin marketplace add ThatsHoon/phro-humanize
+/plugin install phro-humanize@phro-humanize
+```
+
+새 세션에서 `/phro-humanize:humanize`를 부르거나 "이 글 AI 티 없애줘"처럼 요청합니다.
+
+## 원본과 달라진 점
+
+- **서브에이전트 고정 컨텍스트 축소** — 런타임 에이전트 3종(monolith·diagnostician·finalizer)에 `tools`(Read·Write, monolith·finalizer는 Edit 포함)·`omitClaudeMd`·`maxTurns`를 지정했습니다. 콜마다 실리던 고정 컨텍스트가 35,167 → 약 8,300토큰으로 줄었습니다(2.8K자 실측).
+- **결정적 단계 런처** `scripts/humanize_run.py` — run 할당·입력 저장·shim, 서법 복원·쉼표 제거·게이트·백업을 각각 Bash 1회로 묶었습니다. 파일 입력은 `--input-file`로 넘겨 본문을 Read→Write로 옮기지 않습니다.
+- **개발용 에이전트 5종을 `agents-dev/`로 이동** — 플러그인이 스캔하지 않아 윤문 세션에 설명이 실리지 않습니다(`install.sh --all-agents`로만 설치).
+- **청크 요약 블록 버그 수정** — 청크 출력에 `HUMANIZE-SUMMARY` 블록이 붙으면 게이트가 본문 대부분을 못 보고 거짓 ABORT(문자율 77%)를 내던 문제입니다. 재조립 단계가 블록을 떼고, 게이트는 블록이 본문 중간에 있으면 exit 3으로 알립니다.
+- **진단 중복 읽기 제거** — monolith 입력에 이미 결합된 진단을 따로 다시 읽지 않도록 지시를 정리했습니다.
+
+측정 근거와 시도했다가 되돌린 실험(청크 병합)은 [`design-notes.md`](skills/humanize-korean/references/design-notes.md)에 있습니다. 비용 비교는 2.8K자 발췌 1회 기준 $0.97 → $0.83으로, 반복 측정 전이라 잡음과 구분되지 않는 수준입니다.
+
+Copilot·Codex·Gemini 패키지는 원본 구성 그대로이며, 아래 원본 문서의 설치 명령은 원본 저장소를 가리킵니다. 이 저장소로 클론 설치하려면 URL을 `https://github.com/ThatsHoon/phro-humanize.git`으로 바꾸면 됩니다.
+
+---
+
 <p align="center">
   <img src="assets/social-preview.png" alt="im-not-ai — 한글 AI 티 제거기" width="820">
 </p>
